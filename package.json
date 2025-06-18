@@ -2,9 +2,27 @@
   "repository": "https://github.com/vercel/examples.git",
   "license": "MIT",
   "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "echo \"Add ESLint configuration for linting\""
+  },
   "devDependencies": {
     "@types/node": "^17.0.42",
     "@vercel/node": "^2.9.6",
     "typescript": "^4.7.3"
+  },
+  "dependencies": {
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/websocket": "^11.1.0",
+    "dotenv": "^16.5.0",
+    "fastify": "^5.4.0",
+    "googleapis": "^150.0.1",
+    "nodemon": "^3.1.10",
+    "openai": "^5.5.1",
+    "twilio": "^5.7.1"
   }
 }
