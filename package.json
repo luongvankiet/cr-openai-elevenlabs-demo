@@ -5,15 +5,18 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js",
+    "dev": "vercel dev",
+    "build": "echo 'Build completed'",
+    "start": "vercel dev",
+    "deploy": "vercel --prod",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "echo \"Add ESLint configuration for linting\""
   },
   "devDependencies": {
     "@types/node": "^17.0.42",
     "@vercel/node": "^2.9.6",
-    "typescript": "^4.7.3"
+    "typescript": "^4.7.3",
+    "vercel": "^32.0.0"
   },
   "dependencies": {
     "@fastify/formbody": "^8.0.2",

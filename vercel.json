@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/twiml",
+      "destination": "/api/twiml"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ],
+  "env": {
+    "TWILIO_ACCOUNT_SID": "@twilio-account-sid",
+    "TWILIO_AUTH_TOKEN": "@twilio-auth-token",
+    "TWILIO_FROM_NUMBER": "@twilio-from-number",
+    "OPENAI_API_KEY": "@openai-api-key",
+    "GOOGLE_SHEETS_API_KEY": "@google-sheets-api-key",
+    "GOOGLE_SERVICE_ACCOUNT_EMAIL": "@google-service-account-email",
+    "GOOGLE_PRIVATE_KEY": "@google-private-key",
+    "GOOGLE_SHEETS_SPREADSHEET_ID": "@google-sheets-spreadsheet-id"
+  }
+}
