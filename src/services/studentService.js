@@ -73,6 +73,7 @@ class StudentService {
   async getStudentsNeedingReminders(daysAhead = 7) {
     try {
       const allStudents = await this.getAllStudents();
+      console.log('allStudents', allStudents);
       const studentsNeedingReminders = allStudents.filter(student => 
         student.needsReminderCall(daysAhead)
       );
