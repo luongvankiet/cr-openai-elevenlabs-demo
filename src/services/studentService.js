@@ -188,7 +188,7 @@ class StudentService {
   async makeReminderCall(student) {
     try {
       const fromNumber = config.twilio.fromNumber;
-      const twimlUrl = `https://${config.domain}/twiml`;
+      const twimlUrl = process.env.NODE_ENV === 'production' ? `https://${ config.domain }/api/twiml` : `https://${ config.domain }/twiml`;
       
       console.log(`Making reminder call to ${student.name} at ${student.phoneNumber}`);
       
