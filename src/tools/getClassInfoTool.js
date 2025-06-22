@@ -13,6 +13,8 @@ const getClassInfoTool = {
         type: "string",
         description: "Type of information requested",
         enum: [
+          "name",
+          "description",
           "requirements",
           "materials", 
           "location",
@@ -54,6 +56,8 @@ const getClassInfoTool = {
     // Simulate class information database
     const classInfoDatabase = {
       "Programming Proficiency": {
+        name: "Programming Proficiency",
+        description: "Learn the basics of programming and build your first web app",
         requirements: "Basic computer literacy, willingness to learn coding fundamentals",
         materials: "Laptop with internet connection, code editor (VS Code recommended), notebook for taking notes",
         location: "Online via Zoom - link will be sent 30 minutes before class",
@@ -64,6 +68,8 @@ const getClassInfoTool = {
         homework: "Weekly coding exercises and one final project to build a personal website"
       },
       "Data Science Fundamentals": {
+        name: "Data Science Fundamentals",
+        description: "Learn the basics of data science and build your first data analysis project",
         requirements: "Basic math skills, curiosity about data analysis",
         materials: "Computer with Python installed, Jupyter notebooks, calculator",
         location: "Hybrid - Room 205 or online option available",
@@ -74,6 +80,8 @@ const getClassInfoTool = {
         homework: "Data analysis projects using real-world datasets"
       },
       "Digital Marketing Essentials": {
+        name: "Digital Marketing Essentials",
+        description: "Learn the basics of digital marketing and build your first social media campaign",
         requirements: "Interest in marketing, basic computer skills",
         materials: "Laptop, access to social media accounts for practice",
         location: "Conference Room A, Building 2",
@@ -87,6 +95,8 @@ const getClassInfoTool = {
 
     // Get class info or use generic info
     const classInfo = classInfoDatabase[targetClass] || {
+      name: targetClass,
+      description: "No information available for this class",
       requirements: "Will be provided by your instructor",
       materials: "Material list will be sent before class starts",
       location: "Location details will be confirmed closer to class date",
@@ -101,6 +111,16 @@ const getClassInfoTool = {
     let detailedInfo = {};
 
     switch (infoType) {
+      case "name":
+        responseInfo = `The name of the class is: ${classInfo.name}`;
+        detailedInfo = { name: classInfo.name };
+        break;
+
+      case "description":
+        responseInfo = `The description of the class is: ${classInfo.description}`;
+        detailedInfo = { description: classInfo.description };
+        break;
+
       case "requirements":
         responseInfo = `For ${targetClass}, the requirements are: ${classInfo.requirements}`;
         detailedInfo = { requirements: classInfo.requirements };

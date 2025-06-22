@@ -327,7 +327,24 @@ class WebSocketHandlers {
    */
   async generateAIResponse(ws, sessionData) {
     try {
-      // Try function calling first
+      // Check if this is a follow-up response after a tool call
+      const lastMessage = sessionData.conversation[sessionData.conversation.length - 1];
+      const isToolFollowUp = lastMessage?.role === 'system' && lastMessage.content.includes('executed successfully');
+      
+      if (!isToolFollowUp) {
+        // Send a waiting message only for initial tool calls, not follow-ups
+        const waitingMessages = [
+          "Let me check that information for you.",
+          "One moment while I look that up.",
+          "Please hold on while I fetch those details.",
+          "I'll check that for you right away.",
+          "Just a moment while I verify that information."
+        ];
+        const waitingMessage = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
+        this.sendTextMessage(ws, waitingMessage, true);
+      }
+
+      // Try function calling
       const context = {
         sessionData,
         twilioService,
@@ -422,11 +439,22 @@ class WebSocketHandlers {
     } else {
       // Handle other tool calls
       console.log(`Tool ${toolCall.name} executed with result:`, toolResult);
-      
       // Send tool result back to conversation if needed
-      if (toolResult && toolResult.responseMessage) {
-        this.sendTextMessage(ws, toolResult.responseMessage, true);
-        sessionService.addMessage(ws.callSid, "assistant", toolResult.responseMessage);
+            if (toolResult && toolResult.success) {
+        // Update user context with tool result
+        const toolContext = `Tool "${toolCall.name}" executed successfully with the following information:\n${JSON.stringify(toolResult.detailedInfo, null, 2)}`;
+        sessionService.addMessage(ws.callSid, "system", toolContext);
+
+        // Generate a natural AI response using the tool result
+        setTimeout(async () => {
+          try {
+            await this.generateAIResponse(ws, sessionData);
+          } catch (error) {
+            console.error("Error generating AI response after tool call:", error);
+            // Fallback to direct tool response if AI fails
+            this.sendTextMessage(ws, toolResult.responseInfo, true);
+          }
+        }, 100);
       }
     }
   }

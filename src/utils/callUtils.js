@@ -5,11 +5,10 @@
  */
 export function shouldEndCall(message) {
   const endPhrases = [
-    'goodbye', 'bye', 'thank you', 'thanks', 'hang up', 
-    'end call', 'disconnect', 'we\'re done', 'that helps', 
-    'have a good day'
+    'goodbye', 'bye', 'thank you', 'thanks', 'hang up',
+    'end call', 'have a good day'
   ];
-  
+
   const lowerMessage = message.toLowerCase();
   return endPhrases.some(phrase => lowerMessage.includes(phrase));
 }
@@ -20,25 +19,28 @@ export function shouldEndCall(message) {
  * @returns {boolean} Whether AI wants to end call
  */
 export function shouldAIEndCall(aiResponse) {
-  const aiEndPhrases = [
-    'goodbye', 'good bye', 'have a great day', 'take care',
-    'call us anytime', 'thank you for calling', 'feel free to call back',
-     'that should take care of everything', 'have a great day',
-    'take care', 'call us anytime', 'thank you for calling', 'feel free to call back',
-    'hope this helps', 'that should take care of everything', 'have a great day',
-  ];
-  
+  const aiEndPhrases = ['goodbye', 'good bye', 'have a great day', 'take care'];
+  const completionPhrases = ['anything else', 'is that all', 'does that help'];
+
   const lowerResponse = aiResponse.toLowerCase();
-  
+
   // Check for ending phrases
-  const hasEndPhrase = aiEndPhrases.some(phrase => lowerResponse.includes(phrase));
-  
+  const hasEndPhrase = aiEndPhrases.some(phrase => {
+    // Only match if the phrase appears at the end of the response
+    const phraseIndex = lowerResponse.indexOf(phrase);
+    return phraseIndex !== -1 && 
+           phraseIndex >= lowerResponse.length - phrase.length - 10; // Allow some flexibility for punctuation
+  });
+
   // Check for question patterns that suggest conversation is complete
-  const hasCompletionQuestion = lowerResponse.includes('anything else') || 
-                                lowerResponse.includes('is that all') ||
-                                lowerResponse.includes('does that help');
-  
-  return hasEndPhrase || hasCompletionQuestion;
+  // Only match if they appear as complete questions, not partial matches
+  const hasCompletionQuestion = completionPhrases.some(phrase => {
+    const phraseWithQuestion = phrase + '?';
+    return lowerResponse.includes(phraseWithQuestion);
+  });
+
+  // Require both an end phrase and a completion question to end the call
+  return hasEndPhrase && hasCompletionQuestion;
 }
 
 /**
@@ -46,7 +48,7 @@ export function shouldAIEndCall(aiResponse) {
  * @returns {string} Session ID
  */
 export function generateSessionId() {
-  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `session_${ Date.now() }_${ Math.random().toString(36).substr(2, 9) }`;
 }
 
 /**
@@ -61,11 +63,11 @@ export function formatCallDuration(startTime, endTime = null) {
   const seconds = Math.floor(durationMs / 1000);
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  
+
   if (minutes > 0) {
-    return `${minutes}m ${remainingSeconds}s`;
+    return `${ minutes }m ${ remainingSeconds }s`;
   }
-  return `${seconds}s`;
+  return `${ seconds }s`;
 }
 
 /**
@@ -85,14 +87,14 @@ export function isValidPhoneNumber(phoneNumber) {
  */
 export function cleanPhoneNumber(phoneNumber) {
   if (!phoneNumber) return '';
-  
+
   // Remove all non-digit characters except +
   let cleaned = phoneNumber.replace(/[^\d+]/g, '');
-  
+
   // Add + if not present and number doesn't start with it
   if (!cleaned.startsWith('+')) {
     cleaned = '+' + cleaned;
   }
-  
+
   return cleaned;
 } 

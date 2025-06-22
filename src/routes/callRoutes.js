@@ -6,7 +6,8 @@ import callController from "../controllers/callController.js";
  */
 export default async function callRoutes(fastify) {
   // TwiML endpoint for incoming calls
-  fastify.all("/twiml", callController.generateTwiML);
+  fastify.all("/api/twiml", callController.generateTwiML);
+
 
   // Call management endpoints
   fastify.post("/api/call", {
