@@ -328,21 +328,21 @@ class WebSocketHandlers {
   async generateAIResponse(ws, sessionData) {
     try {
       // Check if this is a follow-up response after a tool call
-      const lastMessage = sessionData.conversation[sessionData.conversation.length - 1];
-      const isToolFollowUp = lastMessage?.role === 'system' && lastMessage.content.includes('executed successfully');
+      // const lastMessage = sessionData.conversation[sessionData.conversation.length - 1];
+      // const isToolFollowUp = lastMessage?.role === 'system' && lastMessage.content.includes('executed successfully');
       
-      if (!isToolFollowUp) {
+      // if (!isToolFollowUp) {
         // Send a waiting message only for initial tool calls, not follow-ups
-        const waitingMessages = [
-          "Let me check that information for you.",
-          "One moment while I look that up.",
-          "Please hold on while I fetch those details.",
-          "I'll check that for you right away.",
-          "Just a moment while I verify that information."
-        ];
-        const waitingMessage = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
-        this.sendTextMessage(ws, waitingMessage, true);
-      }
+      //   const waitingMessages = [
+      //     "Let me check that information for you.",
+      //     "One moment while I look that up.",
+      //     "Please hold on while I fetch those details.",
+      //     "I'll check that for you right away.",
+      //     "Just a moment while I verify that information."
+      //   ];
+      //   const waitingMessage = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
+      //   this.sendTextMessage(ws, waitingMessage, true);
+      // }
 
       // Try function calling
       const context = {
