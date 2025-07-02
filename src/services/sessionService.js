@@ -15,18 +15,14 @@ class SessionService {
     const sessionData = {
       callSid,
       conversation: [{ role: "system", content: SYSTEM_PROMPT }],
-      lastFullResponse: [],
-      lastActivity: Date.now(),
-      timeoutId: null,
-      errors: [],
       startTime: Date.now(),
-      metadata: {
-        userAgent: null,
-        ipAddress: null,
-        platform: null
-      }
+      lastActivity: Date.now(),
+      timeout: null,
+      toolCallHistory: [], // Track tool calls to prevent loops
+      consecutiveToolCalls: 0, // Track consecutive tool calls
+      maxConsecutiveToolCalls: 1, // Limit consecutive tool calls
     };
-
+    
     this.sessions.set(callSid, sessionData);
     console.log(`Session created for call: ${callSid}`);
     
@@ -101,8 +97,8 @@ class SessionService {
     if (!session) return null;
 
     // Clear existing timeout
-    if (session.timeoutId) {
-      clearTimeout(session.timeoutId);
+    if (session.timeout) {
+      clearTimeout(session.timeout);
     }
 
     // Set new timeout
@@ -111,7 +107,7 @@ class SessionService {
       timeoutCallback(callSid);
     }, config.call.timeoutDuration);
 
-    session.timeoutId = timeoutId;
+    session.timeout = timeoutId;
     this.sessions.set(callSid, session);
 
     return timeoutId;
@@ -123,9 +119,9 @@ class SessionService {
    */
   clearSessionTimeout(callSid) {
     const session = this.sessions.get(callSid);
-    if (session && session.timeoutId) {
-      clearTimeout(session.timeoutId);
-      session.timeoutId = null;
+    if (session && session.timeout) {
+      clearTimeout(session.timeout);
+      session.timeout = null;
       this.sessions.set(callSid, session);
     }
   }
@@ -184,8 +180,13 @@ class SessionService {
     const session = this.sessions.get(callSid);
     if (session) {
       // Clear any active timeout
-      if (session.timeoutId) {
-        clearTimeout(session.timeoutId);
+      if (session.timeout) {
+        clearTimeout(session.timeout);
+      }
+      
+      // Clear any greeting timeout
+      if (session.greetingTimeout) {
+        clearTimeout(session.greetingTimeout);
       }
       
       console.log(`Session deleted for call: ${callSid}`);
@@ -233,6 +234,73 @@ class SessionService {
     });
 
     return expiredSessions.length;
+  }
+
+  /**
+   * Add a tool call to the session history
+   * @param {string} callSid - Call SID
+   * @param {string} toolName - Name of the tool called
+   * @param {Object} toolArgs - Tool arguments
+   */
+  addToolCall(callSid, toolName, toolArgs) {
+    const session = this.sessions.get(callSid);
+    if (session) {
+      const toolCall = {
+        toolName,
+        toolArgs,
+        timestamp: Date.now()
+      };
+      
+      session.toolCallHistory.push(toolCall);
+      session.consecutiveToolCalls++;
+      
+      // Keep only last 10 tool calls to prevent memory buildup
+      if (session.toolCallHistory.length > 10) {
+        session.toolCallHistory.shift();
+      }
+    }
+  }
+
+  /**
+   * Reset consecutive tool call counter
+   * @param {string} callSid - Call SID
+   */
+  resetToolCallCounter(callSid) {
+    const session = this.sessions.get(callSid);
+    if (session) {
+      session.consecutiveToolCalls = 0;
+    }
+  }
+
+  /**
+   * Check if tool call would create a loop
+   * @param {string} callSid - Call SID
+   * @param {string} toolName - Tool name
+   * @param {Object} toolArgs - Tool arguments
+   * @returns {boolean} Whether this would create a loop
+   */
+  wouldCreateToolLoop(callSid, toolName, toolArgs) {
+    const session = this.sessions.get(callSid);
+    if (!session) return false;
+
+    // Check if we've exceeded consecutive tool calls
+    if (session.consecutiveToolCalls >= session.maxConsecutiveToolCalls) {
+      return true;
+    }
+
+    // Check for recent identical tool calls (within last 2 minutes)
+    const recentCalls = session.toolCallHistory.filter(call => 
+      Date.now() - call.timestamp < 120000 // 2 minutes
+    );
+
+    // Check for duplicate tool calls with same action
+    const duplicateCalls = recentCalls.filter(call => 
+      call.toolName === toolName && 
+      call.toolArgs.action === toolArgs.action
+    );
+
+    // If we've made the same tool call more than twice recently, it's a loop
+    return duplicateCalls.length >= 2;
   }
 }
 

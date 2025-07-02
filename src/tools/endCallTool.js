@@ -19,7 +19,7 @@ const endCallTool = {
           "customer_satisfied", 
           "goodbye_received",
           "student_confirmed_attendance",
-          "class_rescheduled",
+          "student_not_attending",
           "no_response",
           "technical_issue"
         ]

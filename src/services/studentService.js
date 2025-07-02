@@ -15,18 +15,8 @@ class StudentService {
    * @param {boolean} forceRefresh - Force refresh from Google Sheets
    * @returns {Promise<Array<Student>>}
    */
-  async getAllStudents(forceRefresh = false) {
+  async getAllStudents() {
     try {
-      // Check if we need to refresh cache
-      const shouldRefresh = forceRefresh || 
-        !this.lastFetchTime || 
-        (Date.now() - this.lastFetchTime) > this.cacheTimeout;
-
-      if (!shouldRefresh && this.students.length > 0) {
-        console.log('Returning cached students data');
-        return this.students;
-      }
-
       console.log('Fetching students from Google Sheets...');
       // const sheetsData = await googleSheetsService.getBootcampStudents(
       //   config.googleSheets.spreadsheetId,
