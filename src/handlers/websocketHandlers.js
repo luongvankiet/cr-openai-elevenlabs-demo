@@ -3,7 +3,7 @@ import aiService from "../services/aiService.js";
 import twilioService from "../services/twilioService.js";
 import studentService from "../services/studentService.js";
 import googleSheetsService from "../services/googleSheetsService.js";
-import { shouldEndCall, shouldAIEndCall } from "../utils/callUtils.js";
+import { shouldEndCall, shouldAIEndCall, validateToolCall, shouldLogToolCallForReview } from "../utils/callUtils.js";
 import { TIMEOUT_MESSAGE, CRITICAL_ERROR_MESSAGE, FALLBACK_GOODBYE } from "../constants/prompts.js";
 import config from "../config/index.js";
 
@@ -67,32 +67,64 @@ class WebSocketHandlers {
 
           sessionService.addMessage(callSid, "system", studentContext);
           
-          // Send initial message to trigger AI to start conversation with student name
-          setTimeout(() => {
-            this.sendInitialGreeting(ws, student);
-          }, 200); // Small delay to ensure setup is complete
+          // Mark that we have student info and are ready to greet if needed
+          sessionData.hasStudentInfo = true;
+          sessionData.readyToGreet = true;
+          
+          // Set a timeout to send initial greeting if student doesn't speak first
+          sessionData.greetingTimeout = setTimeout(() => {
+            if (sessionData.readyToGreet) {
+              console.log("Student didn't speak first, sending initial greeting");
+              this.sendInitialGreeting(ws, student);
+              sessionData.readyToGreet = false;
+            }
+          }, 3000); // 3 second delay
           
         } else {
           console.log(`No student found for phone number: ${ toNumber }`);
           
-          // Send generic initial message if no student found
-          setTimeout(() => {
-            this.sendGenericGreeting(ws);
-          }, 1000);
+          // Mark that we don't have student info but are ready to greet if needed
+          sessionData.hasStudentInfo = false;
+          sessionData.readyToGreet = true;
+          
+          // Set a timeout to send generic greeting if student doesn't speak first
+          sessionData.greetingTimeout = setTimeout(() => {
+            if (sessionData.readyToGreet) {
+              console.log("Student didn't speak first, sending generic greeting");
+              this.sendGenericGreeting(ws);
+              sessionData.readyToGreet = false;
+            }
+          }, 3000); // 3 second delay
         }
       } catch (error) {
         console.error("Error looking up student information:", error);
         
-        // Send generic greeting on error
-        setTimeout(() => {
-          this.sendGenericGreeting(ws);
-        }, 1000);
+        // Mark that we don't have student info but are ready to greet if needed
+        sessionData.hasStudentInfo = false;
+        sessionData.readyToGreet = true;
+        
+        // Set a timeout to send generic greeting if student doesn't speak first
+        sessionData.greetingTimeout = setTimeout(() => {
+          if (sessionData.readyToGreet) {
+            console.log("Student didn't speak first, sending generic greeting (error case)");
+            this.sendGenericGreeting(ws);
+            sessionData.readyToGreet = false;
+          }
+        }, 3000); // 3 second delay
       }
     } else {
-      // Send generic greeting if no phone number
-      setTimeout(() => {
-        this.sendGenericGreeting(ws);
-      }, 1000);
+      // Mark that we don't have student info but are ready to greet if needed
+      sessionData.hasStudentInfo = false;
+      sessionData.readyToGreet = true;
+      
+      // Set a timeout to send generic greeting if student doesn't speak first
+      sessionData.greetingTimeout = setTimeout(() => {
+        if (sessionData.readyToGreet) {
+          console.log("Student didn't speak first, sending generic greeting (no phone)");
+          this.sendGenericGreeting(ws);
+          sessionData.readyToGreet = false;
+        }
+      }, 3000); // 3 second delay
     }
     
     // Set up inactivity timeout
@@ -120,6 +152,24 @@ class WebSocketHandlers {
     sessionService.setSessionTimeout(ws.callSid, (callSid) => {
       this.handleTimeout(ws, callSid);
     });
+
+    // Reset tool call counter when user sends new message (prevents loops)
+    sessionService.resetToolCallCounter(ws.callSid);
+
+    // Check if this is the first user message and we haven't sent initial greeting yet
+    const conversationLength = sessionData.conversation.length;
+    const isFirstUserMessage = conversationLength <= 2; // System message + possibly student context
+    
+    if (isFirstUserMessage && sessionData.readyToGreet) {
+      console.log("Student spoke first, canceling greeting timeout and generating AI response");
+      sessionData.readyToGreet = false; // Mark that we no longer need to send initial greeting
+      
+      // Clear the greeting timeout since student spoke first
+      if (sessionData.greetingTimeout) {
+        clearTimeout(sessionData.greetingTimeout);
+        sessionData.greetingTimeout = null;
+      }
+    }
 
     // Add user message to conversation
     sessionService.addMessage(ws.callSid, "user", message.voicePrompt);
@@ -327,22 +377,15 @@ class WebSocketHandlers {
    */
   async generateAIResponse(ws, sessionData) {
     try {
-      // Check if this is a follow-up response after a tool call
-      // const lastMessage = sessionData.conversation[sessionData.conversation.length - 1];
-      // const isToolFollowUp = lastMessage?.role === 'system' && lastMessage.content.includes('executed successfully');
-      
-      // if (!isToolFollowUp) {
-        // Send a waiting message only for initial tool calls, not follow-ups
-      //   const waitingMessages = [
-      //     "Let me check that information for you.",
-      //     "One moment while I look that up.",
-      //     "Please hold on while I fetch those details.",
-      //     "I'll check that for you right away.",
-      //     "Just a moment while I verify that information."
-      //   ];
-      //   const waitingMessage = waitingMessages[Math.floor(Math.random() * waitingMessages.length)];
-      //   this.sendTextMessage(ws, waitingMessage, true);
-      // }
+      // Check if we've hit the consecutive tool call limit
+      if (sessionData.consecutiveToolCalls >= sessionData.maxConsecutiveToolCalls) {
+        console.warn(`[LOOP PREVENTION] Too many consecutive tool calls (${sessionData.consecutiveToolCalls}), forcing regular response`);
+        const fallbackMessage = "Let me help you with your upcoming class. What specific questions do you have about your scheduled session?";
+        this.sendTextMessage(ws, fallbackMessage, true);
+        sessionService.addMessage(ws.callSid, "assistant", fallbackMessage);
+        sessionService.resetToolCallCounter(ws.callSid);
+        return;
+      }
 
       // Try function calling
       const context = {
@@ -360,8 +403,9 @@ class WebSocketHandlers {
         return;
       }
       
-      // Normal response
+      // Normal response - reset tool counter since we got a regular response
       if (response.content) {
+        sessionService.resetToolCallCounter(ws.callSid);
         this.sendTextMessage(ws, response.content, true);
         sessionService.addMessage(ws.callSid, "assistant", response.content);
         
@@ -388,6 +432,63 @@ class WebSocketHandlers {
     
     console.log(`AI called tool: ${toolCall.name}`, toolCall.arguments);
     console.log(`Tool result:`, toolResult);
+    
+    // Check for tool loops FIRST before any processing
+    if (sessionService.wouldCreateToolLoop(ws.callSid, toolCall.name, toolCall.arguments)) {
+      console.warn(`[LOOP PREVENTION] Blocking tool call ${toolCall.name} to prevent loop`);
+      // const loopPreventionMessage = "I notice we've been going in circles. Let me help you in a different way. Is there anything specific about your upcoming class that I can assist you with?";
+      // this.sendTextMessage(ws, loopPreventionMessage, true);
+      // sessionService.addMessage(ws.callSid, "assistant", loopPreventionMessage);
+
+      // end the call
+      await this.handleAIInitiatedEnd(ws, sessionData);
+      return;
+    }
+
+    // Prevent tool calls if conversation is too short (avoid premature tool calling)
+    const conversationLength = sessionData.conversation.length;
+    if (conversationLength <= 2 && toolCall.name !== 'end_call') {
+      console.warn(`[LOOP PREVENTION] Blocking premature tool call ${toolCall.name} - conversation too short`);
+      const prematureMessage = "Let me first understand what you need help with regarding your upcoming class. Can you tell me more about your situation?";
+      this.sendTextMessage(ws, prematureMessage, true);
+      sessionService.addMessage(ws.callSid, "assistant", prematureMessage);
+      return;
+    }
+
+    // Track this tool call
+    sessionService.addToolCall(ws.callSid, toolCall.name, toolCall.arguments);
+    
+    // Validate the tool call before processing
+    const lastUserMessage = sessionData.conversation
+      .slice()
+      .reverse()
+      .find(msg => msg.role === 'user')?.content || '';
+    
+    const validation = validateToolCall(toolCall.name, toolCall.arguments, sessionData, lastUserMessage);
+    
+    // Log validation warnings and errors
+    if (!validation.success) {
+      console.error(`Tool call validation failed: ${validation.error}`);
+      // Don't process invalid tool calls, ask AI to clarify instead
+      const clarificationMessage = `I need to better understand what you're asking for before I can help you. ${validation.error}`;
+      this.sendTextMessage(ws, clarificationMessage, true);
+      sessionService.addMessage(ws.callSid, "assistant", clarificationMessage);
+      return;
+    }
+    
+    if (validation.warnings.length > 0) {
+      console.warn(`Tool call warnings:`, validation.warnings);
+    }
+    
+    // Log tool calls that should be reviewed
+    if (shouldLogToolCallForReview(toolCall.name, validation, toolCall.arguments)) {
+      console.log(`[REVIEW NEEDED] Tool call: ${toolCall.name}`, {
+        arguments: toolCall.arguments,
+        validation: validation,
+        userMessage: lastUserMessage,
+        sessionId: ws.callSid
+      });
+    }
     
     if (toolCall.name === "end_call") {
       sessionService.clearSessionTimeout(ws.callSid);
@@ -439,22 +540,42 @@ class WebSocketHandlers {
     } else {
       // Handle other tool calls
       console.log(`Tool ${toolCall.name} executed with result:`, toolResult);
-      // Send tool result back to conversation if needed
-            if (toolResult && toolResult.success) {
-        // Update user context with tool result
-        const toolContext = `Tool "${toolCall.name}" executed successfully with the following information:\n${JSON.stringify(toolResult.detailedInfo, null, 2)}`;
-        sessionService.addMessage(ws.callSid, "system", toolContext);
-
-        // Generate a natural AI response using the tool result
-        setTimeout(async () => {
-          try {
-            await this.generateAIResponse(ws, sessionData);
-          } catch (error) {
-            console.error("Error generating AI response after tool call:", error);
-            // Fallback to direct tool response if AI fails
-            this.sendTextMessage(ws, toolResult.responseInfo, true);
-          }
-        }, 100);
+      
+      if (toolResult && toolResult.success) {
+        // Send the tool response directly instead of generating another AI response
+        // This prevents tool calling loops
+        const responseMessage = toolResult.responseInfo || "I've processed your request successfully.";
+        this.sendTextMessage(ws, responseMessage, true);
+        sessionService.addMessage(ws.callSid, "assistant", responseMessage);
+        
+        console.log(`Tool ${toolCall.name} completed successfully, sent response to user`);
+      } else {
+        // Handle tool execution failure
+        console.error(`Tool ${toolCall.name} failed:`, toolResult);
+        
+        // Provide a graceful fallback response based on the tool type
+        let fallbackMessage = "I apologize, but I encountered an issue processing your request. ";
+        
+        switch (toolCall.name) {
+          case 'get_class_info':
+            fallbackMessage += "Let me know what specific information you need about your class, and I'll do my best to help you.";
+            break;
+          case 'schedule_class':
+            fallbackMessage += "I'm having trouble with the attendance system right now. Can you tell me more about your class attendance - whether you can confirm or won't be able to attend?";
+            break;
+          default:
+            fallbackMessage += "Please let me know how I can assist you with your upcoming class.";
+        }
+        
+        this.sendTextMessage(ws, fallbackMessage, true);
+        sessionService.addMessage(ws.callSid, "assistant", fallbackMessage);
+        
+        // Log the failure for review
+        console.log(`[TOOL FAILURE] ${toolCall.name} failed`, {
+          toolArgs: toolCall.arguments,
+          error: toolResult?.error,
+          sessionId: ws.callSid
+        });
       }
     }
   }
@@ -592,7 +713,7 @@ class WebSocketHandlers {
       }
 
       // Create an initial prompt to trigger the AI with student's name
-      const initialPrompt = `The call has just connected. Please start the conversation by greeting ${student.name} by name and reminding them about their upcoming ${student.className} class on ${student.classDate} at ${student.classTime}.`;
+      const initialPrompt = `The call has just connected. Please start the conversation by greeting ${student.name} by name and introducing yourself and reminding them about their upcoming ${student.className} class on ${student.classDate} at ${student.classTime}.`;
       
       console.log(`Sending initial greeting for student: ${student.name}`);
       
@@ -621,7 +742,7 @@ class WebSocketHandlers {
       }
 
       // Create a generic initial prompt
-      const genericPrompt = `The call has just connected. Please introduce yourself as Callum from EA Bootcamp and ask how you can help the caller today.`;
+      const genericPrompt = `The call has just connected. Please introduce yourself and ask how you can help the caller today.`;
       
       console.log(`Sending generic greeting for call: ${ws.callSid}`);
       
