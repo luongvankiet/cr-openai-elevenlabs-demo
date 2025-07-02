@@ -621,7 +621,7 @@ class WebSocketHandlers {
       }
 
       // Create a generic initial prompt
-      const genericPrompt = `The call has just connected. Please introduce yourself as Callum from EA Bootcamp and ask how you can help the caller today.`;
+      const genericPrompt = `The call has just connected. Please introduce yourself as Anmol from EA Bootcamp and ask how you can help the caller today.`;
       
       console.log(`Sending generic greeting for call: ${ws.callSid}`);
       
@@ -640,4 +640,4 @@ class WebSocketHandlers {
   }
 }
 
-export default new WebSocketHandlers(); 
+export default new WebSocketHandlers();
