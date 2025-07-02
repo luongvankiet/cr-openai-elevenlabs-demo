@@ -1,14 +1,16 @@
 import endCallTool from './endCallTool.js';
-import scheduleClassTool from './scheduleClassTool.js';
 import getClassInfoTool from './getClassInfoTool.js';
+import scheduleClassTool from './scheduleClassTool.js';
+import updateAttendanceTool from './updateAttendanceTool.js';
 
 /**
  * All available AI tools/functions
  */
 export const AI_TOOLS = [
   endCallTool,
+  getClassInfoTool,
   scheduleClassTool,
-  getClassInfoTool
+  updateAttendanceTool
 ];
 
 /**
@@ -56,4 +58,4 @@ export default {
   AI_TOOLS,
   getToolDefinitions,
   executeTool
-}; 
+};

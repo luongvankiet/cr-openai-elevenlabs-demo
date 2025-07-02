@@ -334,6 +334,47 @@ export class GoogleSheetsService {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * Update student attendance status in Google Sheets
+   * @param {Object} student - Student info
+   * @param {string} status - New attendance status
+   * @param {string} reason - Optional reason for status update
+   * @returns {Promise<Object>} Update result
+   */
+  async updateAttendanceStatus(student, status, reason) {
+    try {
+      // Find the student row in the sheet
+      const allData = await this.getSheetData();
+      const studentRowIndex = allData.findIndex(row => 
+        row['Student Id'] === student.studentId || 
+        (row['Name'] === student.name && row['Phone Number'] === student.phoneNumber)
+      );
+
+      if (studentRowIndex === -1) {
+        console.log(`Student not found in sheet: ${student.name}`);
+        return { success: false, reason: "Student not found" };
+      }
+
+      // Prepare update data
+      const updateData = {
+        'Status': status,
+        'Last Reminder Call Status': status,
+        'Reason': reason || '',
+        'Notes': `Attendance status updated to ${status} via phone call on ${new Date().toLocaleDateString()}${reason ? ': ' + reason : ''}`
+      };
+
+      // Update the sheet (row index + 2 because sheets are 1-indexed and have header row)
+      const result = await this.updateRow(studentRowIndex + 2, updateData);
+      
+      console.log(`Successfully updated attendance status for student ${student.name} to ${status} in Google Sheets`);
+      return { success: true, result };
+
+    } catch (error) {
+      console.error("Error updating attendance status in Google Sheets:", error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 // Export singleton instance

@@ -3,6 +3,8 @@
  * Allows the AI to end phone calls when conversations are complete
  */
 
+import googleSheetsService from '../services/googleSheetsService.js';
+
 const endCallTool = {
   name: "end_call",
   description: "End the phone call when the conversation is complete and student is satisfied",
@@ -60,6 +62,16 @@ const endCallTool = {
       sessionData.callEndInfo = callEndInfo;
     }
 
+    // Update attendance if reason is related to attendance
+    if (["student_confirmed_attendance", "class_rescheduled"].includes(reason) && sessionData.studentInfo) {
+      const status = reason === "student_confirmed_attendance" ? "Attending" : "Pending";
+      const attendanceUpdateResult = await googleSheetsService.updateAttendanceStatus(sessionData.studentInfo, status, reason === "class_rescheduled" ? "Class rescheduled" : undefined);
+      
+      if (!attendanceUpdateResult.success) {
+        console.log(`Failed to update attendance status for ${sessionData.studentInfo.name}: ${attendanceUpdateResult.reason}`);
+      }
+    }
+
     return {
       success: true,
       action: "end_call",
@@ -71,4 +83,4 @@ const endCallTool = {
   }
 };
 
-export default endCallTool; 
+export default endCallTool;

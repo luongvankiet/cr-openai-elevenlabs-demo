@@ -30,7 +30,7 @@ const config = {
       
   // Call Configuration
   call: {
-    welcomeGreeting: "Hi! This is Callum from the EA Bootcamp. I'm calling to remind you about your upcoming class.",
+    welcomeGreeting: "Hi! This is Anmol from the EA Bootcamp. I'm calling to remind you about your upcoming class.",
     timeoutDuration: 5 * 60 * 1000, // 5 minutes
     hangupDelay: 7000, // 2 seconds
     functionCallDelay: 1500, // 1.5 seconds
@@ -47,4 +47,4 @@ const config = {
 // WebSocket URL with proper context binding
 config.websocket.url = config.websocket.url.bind(config);
 
-export default config; 
+export default config;

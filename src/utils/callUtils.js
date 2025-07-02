@@ -115,18 +115,32 @@ export function validateToolCall(toolName, toolArgs, sessionData, userMessage) {
 
   // Validate based on tool type
   switch (toolName) {
-    case 'get_class_info':
-      validation.success = validateGetClassInfoCall(toolArgs, userMessage, validation);
+    case "get_class_info":
+      validation.success = validateGetClassInfoCall(
+        toolArgs,
+        userMessage,
+        validation
+      );
       break;
-    
-    case 'schedule_class':
-      validation.success = validateScheduleClassCall(toolArgs, sessionData, userMessage, validation);
+
+    case "update_attendance":
+    case "schedule_class":
+      validation.success = validateScheduleClassCall(
+        toolArgs,
+        sessionData,
+        userMessage,
+        validation
+      );
       break;
-    
-    case 'end_call':
-      validation.success = validateEndCallTool(toolArgs, sessionData, validation);
+
+    case "end_call":
+      validation.success = validateEndCallTool(
+        toolArgs,
+        sessionData,
+        validation
+      );
       break;
-    
+
     default:
       validation.success = false;
       validation.error = `Unknown tool: ${toolName}`;

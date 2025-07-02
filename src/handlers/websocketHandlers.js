@@ -458,38 +458,6 @@ class WebSocketHandlers {
     // Track this tool call
     sessionService.addToolCall(ws.callSid, toolCall.name, toolCall.arguments);
     
-    // Validate the tool call before processing
-    const lastUserMessage = sessionData.conversation
-      .slice()
-      .reverse()
-      .find(msg => msg.role === 'user')?.content || '';
-    
-    const validation = validateToolCall(toolCall.name, toolCall.arguments, sessionData, lastUserMessage);
-    
-    // Log validation warnings and errors
-    if (!validation.success) {
-      console.error(`Tool call validation failed: ${validation.error}`);
-      // Don't process invalid tool calls, ask AI to clarify instead
-      const clarificationMessage = `I need to better understand what you're asking for before I can help you. ${validation.error}`;
-      this.sendTextMessage(ws, clarificationMessage, true);
-      sessionService.addMessage(ws.callSid, "assistant", clarificationMessage);
-      return;
-    }
-    
-    if (validation.warnings.length > 0) {
-      console.warn(`Tool call warnings:`, validation.warnings);
-    }
-    
-    // Log tool calls that should be reviewed
-    if (shouldLogToolCallForReview(toolCall.name, validation, toolCall.arguments)) {
-      console.log(`[REVIEW NEEDED] Tool call: ${toolCall.name}`, {
-        arguments: toolCall.arguments,
-        validation: validation,
-        userMessage: lastUserMessage,
-        sessionId: ws.callSid
-      });
-    }
-    
     if (toolCall.name === "end_call") {
       sessionService.clearSessionTimeout(ws.callSid);
       
@@ -544,7 +512,7 @@ class WebSocketHandlers {
       if (toolResult && toolResult.success) {
         // Send the tool response directly instead of generating another AI response
         // This prevents tool calling loops
-        const responseMessage = toolResult.responseInfo || "I've processed your request successfully.";
+        const responseMessage = toolResult.responseInfo || "I've processed your request successfully. Let me know if you have any other questions about your upcoming class.";
         this.sendTextMessage(ws, responseMessage, true);
         sessionService.addMessage(ws.callSid, "assistant", responseMessage);
         
@@ -742,7 +710,7 @@ class WebSocketHandlers {
       }
 
       // Create a generic initial prompt
-      const genericPrompt = `The call has just connected. Please introduce yourself and ask how you can help the caller today.`;
+      const genericPrompt = `The call has just connected. Please introduce yourself as Anmol from EA Bootcamp and ask how you can help the caller today.`;
       
       console.log(`Sending generic greeting for call: ${ws.callSid}`);
       
@@ -761,4 +729,4 @@ class WebSocketHandlers {
   }
 }
 
-export default new WebSocketHandlers(); 
+export default new WebSocketHandlers();
