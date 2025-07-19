@@ -528,9 +528,9 @@ class WebSocketHandlers {
           case 'get_class_info':
             fallbackMessage += "Let me know what specific information you need about your class, and I'll do my best to help you.";
             break;
-          case 'schedule_class':
-            fallbackMessage += "I'm having trouble with the attendance system right now. Can you tell me more about your class attendance - whether you can confirm or won't be able to attend?";
-            break;
+            case 'update_attendance':
+              fallbackMessage += "I'm having trouble with the attendance system right now. Can you tell me more about your class attendance - whether you can confirm or won't be able to attend?";
+              break;
           default:
             fallbackMessage += "Please let me know how I can assist you with your upcoming class.";
         }

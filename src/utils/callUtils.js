@@ -319,9 +319,11 @@ export function shouldLogToolCallForReview(toolName, validation, toolArgs) {
   
   // Log schedule operations that may need review
   if (toolName === 'schedule_class' && !toolArgs.reason) return true;
+  if (toolName === 'update_attendance' && !toolArgs.reason) return true;
   
   // Log not_attending actions without specific reasons
   if (toolName === 'schedule_class' && toolArgs.action === 'not_attending' && !toolArgs.reason) return true;
+  if (toolName === 'update_attendance' && toolArgs.action === 'not_attending' && !toolArgs.reason) return true;
   
   return false;
 } 

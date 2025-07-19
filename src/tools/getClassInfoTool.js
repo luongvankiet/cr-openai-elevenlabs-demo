@@ -90,6 +90,18 @@ const getClassInfoTool = {
         instructor: "Lisa Rodriguez - Marketing Director with 10+ years experience",
         syllabus: "Social media strategy, content creation, analytics, email marketing",
         homework: "Create marketing campaigns for fictional products"
+      },
+      "Fullstack Development Bootcamp": {
+        name: "Fullstack Development Bootcamp",
+        description: "Learn to build web applications from scratch",
+        requirements: "Basic computer literacy, willingness to learn coding fundamentals",
+        materials: "Laptop with internet connection, code editor (VS Code recommended), notebook for taking notes",
+        location: "Online via Zoom - link will be sent 30 minutes before class",
+        preparation: "Please ensure your laptop is charged and you have a stable internet connection. Review any pre-class materials sent via email",
+        schedule: "Mondays and Wednesdays, 10:00 AM - 12:00 PM",
+        instructor: "Callum Bir - Senior Software Developer with more than 20 years experience of integrating AI into his work",
+        syllabus: "Week 1-2: HTML/CSS basics, Week 3-4: JavaScript fundamentals, Week 5-6: Building your first web app",
+        homework: "Weekly coding exercises and one final project to build a personal website"
       }
     };
 
